@@ -1,55 +1,91 @@
 import express from 'express';
 import { protect as auth } from '../middleware/authMiddleware.js';
+import Hazard from '../models/Hazard.js';
 
 const router = express.Router();
 
-// Mock incident data (in a real app, this would come from a database)
-const incidents = [
-  {
-    id: '1',
-    title: 'Equipment Malfunction',
-    description: 'Conveyor belt failure in Section A caused minor delays',
-    date: '2023-10-15',
-    severity: 'Medium',
-    status: 'Resolved',
-    location: 'Section A, Level 2',
-    reportedBy: 'John Doe'
-  },
-  {
-    id: '2',
-    title: 'Minor Flooding',
-    description: 'Water leak from drainage system affected lower tunnel access',
-    date: '2023-09-28',
-    severity: 'High',
-    status: 'Resolved',
-    location: 'Lower Tunnel, Section C',
-    reportedBy: 'Sarah Smith'
+// Get all incidents (hazards from database)
+router.get('/', auth, async (req, res) => {
+  try {
+    const hazards = await Hazard.find()
+      .populate('reportedBy', 'name email')
+      .populate('assignedTo', 'name email')
+      .sort({ createdAt: -1 });
+    
+    // Transform hazards to match incident format expected by frontend
+    const incidents = hazards.map(hazard => ({
+      id: hazard._id.toString(),
+      title: hazard.title,
+      description: hazard.description,
+      date: new Date(hazard.createdAt).toISOString().split('T')[0],
+      severity: hazard.severity ? hazard.severity.charAt(0).toUpperCase() + hazard.severity.slice(1) : 'Medium',
+      status: hazard.status === 'resolved' ? 'Resolved' : 
+              hazard.status === 'in_review' ? 'Under Investigation' : 
+              'Pending',
+      location: hazard.location?.description || 'Location not specified',
+      reportedBy: hazard.reportedBy?.name || 'Unknown',
+      category: hazard.category,
+      imageUrl: hazard.imageUrl,
+      createdAt: hazard.createdAt
+    }));
+    
+    res.json({
+      success: true,
+      data: incidents
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Server Error',
+      error: error.message
+    });
   }
-];
-
-// Get all incidents
-router.get('/', auth, (req, res) => {
-  res.json({
-    success: true,
-    data: incidents
-  });
 });
 
 // Get incident by ID
-router.get('/:id', auth, (req, res) => {
-  const incident = incidents.find(i => i.id === req.params.id);
-  
-  if (!incident) {
-    return res.status(404).json({
+router.get('/:id', auth, async (req, res) => {
+  try {
+    const hazard = await Hazard.findById(req.params.id)
+      .populate('reportedBy', 'name email')
+      .populate('assignedTo', 'name email')
+      .populate('resolution.resolvedBy', 'name email');
+    
+    if (!hazard) {
+      return res.status(404).json({
+        success: false,
+        message: 'Incident not found'
+      });
+    }
+    
+    // Transform hazard to match incident format
+    const incident = {
+      id: hazard._id.toString(),
+      title: hazard.title,
+      description: hazard.description,
+      date: new Date(hazard.createdAt).toISOString().split('T')[0],
+      severity: hazard.severity ? hazard.severity.charAt(0).toUpperCase() + hazard.severity.slice(1) : 'Medium',
+      status: hazard.status === 'resolved' ? 'Resolved' : 
+              hazard.status === 'in_review' ? 'Under Investigation' : 
+              'Pending',
+      location: hazard.location?.description || 'Location not specified',
+      reportedBy: hazard.reportedBy?.name || 'Unknown',
+      category: hazard.category,
+      imageUrl: hazard.imageUrl,
+      createdAt: hazard.createdAt,
+      resolution: hazard.resolution
+    };
+    
+    res.json({
+      success: true,
+      data: incident
+    });
+  } catch (error) {
+    res.status(500).json({
       success: false,
-      message: 'Incident not found'
+      message: 'Server Error',
+      error: error.message
     });
   }
-  
-  res.json({
-    success: true,
-    data: incident
-  });
 });
 
 // Report a new incident (supervisor/admin only)

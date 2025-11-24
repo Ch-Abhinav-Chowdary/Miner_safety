@@ -1,10 +1,13 @@
-import { useContext, useEffect, useState } from 'react';
+import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AuthContext } from '../../context/AuthContext';
-import axios from 'axios';
 import { motion } from 'framer-motion';
+import ReactPlayer from 'react-player';
+import playlistVideos from '../../data/playlistVideos.json';
+import api from '../../utils/axiosConfig';
 
 const Dashboard = () => {
   const { user } = useContext(AuthContext);
+  const [videos] = useState(playlistVideos);
   const [stats, setStats] = useState({
     pendingChecklist: false,
     safetyTips: [
@@ -13,12 +16,10 @@ const Dashboard = () => {
       "Stay hydrated during your shift",
       "Check equipment before use",
       "Know your emergency evacuation routes"
-    ],
-    videoOfTheDay: {
-      title: "Safety Procedures in Underground Mining",
-      url: "https://www.youtube.com/embed/dQw4w9WgXcQ" // Placeholder URL
-    }
+    ]
   });
+
+  const missedChecklistRef = useRef(null);
 
   useEffect(() => {
     // In a real app, we would fetch this data from the backend
@@ -39,6 +40,32 @@ const Dashboard = () => {
 
     fetchDashboardData();
   }, []);
+
+  useEffect(() => {
+    const shouldNotifyAdmin = stats.pendingChecklist && user?.role === 'worker';
+    if (!shouldNotifyAdmin || !user?._id) {
+      return;
+    }
+
+    const todayKey = new Date().toISOString().split('T')[0];
+    if (missedChecklistRef.current === todayKey) {
+      return;
+    }
+
+    const notifyAdmin = async () => {
+      try {
+        await api.post('/checklist/missed', {
+          userId: user._id,
+          reason: 'pre_shift_check'
+        });
+        missedChecklistRef.current = todayKey;
+      } catch (error) {
+        console.error('Failed to notify admin about missed checklist:', error);
+      }
+    };
+
+    notifyAdmin();
+  }, [stats.pendingChecklist, user?._id, user?.role]);
 
   // Animation variants
   const containerVariants = {
@@ -62,6 +89,15 @@ const Dashboard = () => {
       }
     }
   };
+
+  const videoOfTheDay = useMemo(() => {
+    if (!videos.length) return null;
+    const today = new Date().toISOString().split('T')[0];
+    const hash = today
+      .split('')
+      .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return videos[hash % videos.length];
+  }, [videos]);
 
   return (
     <div className="container mx-auto px-4 py-8 mt-10">
@@ -208,21 +244,42 @@ const Dashboard = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
               </svg>
             </div>
-            <h2 className="text-xl font-semibold text-black">Safety Video of the Day</h2>
-          </div>
-          <div className="bg-black rounded-xl overflow-hidden shadow-xl">
-            <div className="aspect-w-16 aspect-h-9">
-              <iframe 
-                src={stats.videoOfTheDay.url}
-                title={stats.videoOfTheDay.title}
-                className="w-full h-64 md:h-96"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              ></iframe>
+            <div>
+              <h2 className="text-xl font-semibold text-black">Safety Video of the Day</h2>
+              <p className="text-sm text-gray-500">Auto-rotates daily from MSHA playlist</p>
             </div>
           </div>
-          <h3 className="mt-4 text-lg font-medium text-center">{stats.videoOfTheDay.title}</h3>
+          {videoOfTheDay ? (
+            <>
+              <div className="bg-black rounded-xl overflow-hidden shadow-xl">
+                <ReactPlayer
+                  url={videoOfTheDay.url}
+                  width="100%"
+                  height="360px"
+                  controls
+                  light={videoOfTheDay.thumbnail}
+                  playing={false}
+                />
+              </div>
+              <div className="mt-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">{videoOfTheDay.title}</h3>
+                  <p className="text-sm text-gray-600 mt-1 line-clamp-2">{videoOfTheDay.description}</p>
+                </div>
+                <a 
+                  href="/video-library" 
+                  className="inline-flex items-center px-4 py-2 rounded-lg bg-primary-600 text-white font-medium hover:bg-primary-700 transition-colors shadow"
+                >
+                  View in library
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
+                </a>
+              </div>
+            </>
+          ) : (
+            <p className="text-gray-500">Loading today’s safety video…</p>
+          )}
         </motion.div>
       </motion.div>
     </div>

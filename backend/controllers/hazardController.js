@@ -6,7 +6,7 @@ export const getHazards = async (req, res) => {
     const hazards = await Hazard.find()
       .populate('reportedBy', 'name email')
       .populate('assignedTo', 'name email')
-      .sort({ reportedAt: -1 });
+      .sort({ createdAt: -1 });
     
     res.json({
       success: true,
@@ -53,17 +53,37 @@ export const getHazardById = async (req, res) => {
 // Create new hazard
 export const createHazard = async (req, res) => {
   try {
-    const { title, description, location, severity, category, imageUrl } = req.body;
+    const { title, description, location, severity, category } = req.body;
+    
+    // Handle file upload
+    let imageUrl = null;
+    if (req.file) {
+      // Construct the full image URL
+      const protocol = req.protocol;
+      const host = req.get('host');
+      imageUrl = `${protocol}://${host}/uploads/hazards/${req.file.filename}`;
+    }
+    
+    // Process location - frontend sends location as a string
+    // Store it in location.description for now
+    const locationData = {
+      type: 'Point',
+      coordinates: [0, 0], // Default coordinates, can be enhanced later with GPS
+      description: location || 'Location not specified'
+    };
     
     const hazard = await Hazard.create({
       title,
       description,
-      location,
-      severity,
-      category,
+      location: locationData,
+      severity: severity || 'medium',
+      category: category || 'physical',
       imageUrl,
       reportedBy: req.user.id
     });
+    
+    // Populate the reportedBy field
+    await hazard.populate('reportedBy', 'name email');
     
     res.status(201).json({
       success: true,
@@ -162,7 +182,7 @@ export const deleteHazard = async (req, res) => {
       });
     }
     
-    await hazard.remove();
+    await Hazard.findByIdAndDelete(req.params.id);
     
     res.json({
       success: true,
@@ -183,7 +203,7 @@ export const getHazardsBySeverity = async (req, res) => {
     const hazards = await Hazard.find({ severity: req.params.severity })
       .populate('reportedBy', 'name email')
       .populate('assignedTo', 'name email')
-      .sort({ reportedAt: -1 });
+      .sort({ createdAt: -1 });
     
     res.json({
       success: true,
@@ -205,7 +225,7 @@ export const getHazardsByCategory = async (req, res) => {
     const hazards = await Hazard.find({ category: req.params.category })
       .populate('reportedBy', 'name email')
       .populate('assignedTo', 'name email')
-      .sort({ reportedAt: -1 });
+      .sort({ createdAt: -1 });
     
     res.json({
       success: true,

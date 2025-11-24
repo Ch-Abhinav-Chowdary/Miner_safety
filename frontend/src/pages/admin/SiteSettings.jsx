@@ -79,7 +79,7 @@ const SiteSettings = () => {
                 name="siteName"
                 value={generalSettings.siteName}
                 onChange={handleGeneralChange}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-white-700 leading-tight focus:outline-none focus:shadow-outline"
               />
             </div>
             <div className="mb-4">
@@ -91,7 +91,7 @@ const SiteSettings = () => {
                 name="siteDescription"
                 value={generalSettings.siteDescription}
                 onChange={handleGeneralChange}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-white-700 leading-tight focus:outline-none focus:shadow-outline"
                 rows="3"
               ></textarea>
             </div>
@@ -105,7 +105,7 @@ const SiteSettings = () => {
                 name="contactEmail"
                 value={generalSettings.contactEmail}
                 onChange={handleGeneralChange}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-white-700 leading-tight focus:outline-none focus:shadow-outline"
               />
             </div>
             <div className="mb-4">
@@ -118,7 +118,7 @@ const SiteSettings = () => {
                 name="supportPhone"
                 value={generalSettings.supportPhone}
                 onChange={handleGeneralChange}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-white-700 leading-tight focus:outline-none focus:shadow-outline"
               />
             </div>
             <div className="mb-4 flex items-center">
@@ -130,7 +130,7 @@ const SiteSettings = () => {
                 onChange={handleGeneralChange}
                 className="mr-2"
               />
-              <label className="text-gray-700 text-sm font-bold" htmlFor="maintenanceMode">
+              <label className="text-white-700 text-sm font-bold" htmlFor="maintenanceMode">
                 Maintenance Mode
               </label>
             </div>
@@ -228,7 +228,7 @@ const SiteSettings = () => {
                   value={securitySettings.passwordExpiry}
                   onChange={handleSecurityChange}
                   min="0"
-                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-white-700 leading-tight focus:outline-none focus:shadow-outline"
                 />
               </div>
               <div className="mb-4">
@@ -242,7 +242,7 @@ const SiteSettings = () => {
                   value={securitySettings.sessionTimeout}
                   onChange={handleSecurityChange}
                   min="1"
-                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-white-700 leading-tight focus:outline-none focus:shadow-outline"
                 />
               </div>
               <div className="mb-4">
@@ -256,7 +256,7 @@ const SiteSettings = () => {
                   value={securitySettings.loginAttempts}
                   onChange={handleSecurityChange}
                   min="1"
-                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-white-700 leading-tight focus:outline-none focus:shadow-outline"
                 />
               </div>
               <div className="mb-4 flex items-center">

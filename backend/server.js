@@ -6,6 +6,8 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import mongoose from 'mongoose';
 import rateLimit from 'express-rate-limit';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 
 // Import routes (will create these files next)
 import authRoutes from './routes/auth.js';
@@ -14,7 +16,7 @@ import videoRoutes from './routes/video.js';
 import hazardRoutes from './routes/hazard.js';
 import incidentRoutes from './routes/incident.js';
 import alertRoutes from './routes/alert.js';
-import behaviorRoutes from './routes/behavior.js';
+/* import behaviorRoutes from './routes/behavior.js'; */
 import healthRoutes from './routes/health.js';
 import validateEnv from './config/validateEnv.js';
 import behaviorRoutes from './routes/behavior.js';
@@ -39,7 +41,7 @@ const io = new Server(httpServer, {
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: process.env.CLIENT_URL || 'http://localhost:5174',
   credentials: true
 }));
 const apiLimiter = rateLimit({
@@ -51,6 +53,11 @@ const apiLimiter = rateLimit({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/api', apiLimiter);
+
+// Serve static files for uploads
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+app.use('/uploads', express.static(join(__dirname, 'uploads')));
 
 // Database connection
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/mine-safety-app')

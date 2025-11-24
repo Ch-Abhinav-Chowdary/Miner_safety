@@ -12,7 +12,7 @@ const behaviorAlertSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['low_compliance', 'ppe_non_compliance', 'inactive', 'video_avoidance', 'custom'],
+    enum: ['low_compliance', 'ppe_non_compliance', 'inactive', 'video_avoidance', 'checklist_missed', 'custom'],
     required: true,
   },
   severity: {

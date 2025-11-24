@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import ReactPlayer from 'react-player';
 import { motion } from 'framer-motion';
 import { logBehaviorEvent } from '../../utils/behaviorTracker';
+import playlistVideos from '../../data/playlistVideos.json';
 
 const VideoLibrary = () => {
   const [videos, setVideos] = useState([]);
@@ -11,54 +12,50 @@ const VideoLibrary = () => {
   const [milestonesLogged, setMilestonesLogged] = useState({ 25: false, 50: false, 75: false });
   const lastProgressRef = useRef({ playedSeconds: 0 });
 
-  // Mock video data
-  const mockVideos = [
-    {
-      id: 1,
-      title: 'Personal Protective Equipment Usage',
-      description: 'Learn how to properly use and maintain your PPE for maximum safety.',
-      url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-      thumbnail: 'https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg',
-      category: 'equipment',
-      duration: '5:30'
+  const categoryConfig = {
+    equipment: {
+      label: 'Equipment & Ops',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      )
     },
-    {
-      id: 2,
-      title: 'Mine Evacuation Procedures',
-      description: 'Step-by-step guide on evacuation procedures during emergencies.',
-      url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-      thumbnail: 'https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg',
-      category: 'emergency',
-      duration: '8:45'
+    emergency: {
+      label: 'Emergency Response',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+      )
     },
-    {
-      id: 3,
-      title: 'Hazard Identification Training',
-      description: 'How to identify and report potential hazards in the mining environment.',
-      url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-      thumbnail: 'https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg',
-      category: 'hazards',
-      duration: '7:15'
+    hazards: {
+      label: 'Hazard Prevention',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+      )
     },
-    {
-      id: 4,
-      title: 'Safe Equipment Operation',
-      description: 'Guidelines for safely operating mining equipment and machinery.',
-      url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-      thumbnail: 'https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg',
-      category: 'equipment',
-      duration: '10:20'
-    },
-    {
-      id: 5,
-      title: 'First Aid Basics for Mining Injuries',
-      description: 'Basic first aid techniques for common mining injuries.',
-      url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-      thumbnail: 'https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg',
-      category: 'emergency',
-      duration: '9:50'
+    compliance: {
+      label: 'Compliance & Rights',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10m-9 4h4m2 0h3m2 0a2 2 0 002-2V7a2 2 0 00-2-2h-2V3a2 2 0 00-2-2h-4a2 2 0 00-2 2v2H7a2 2 0 00-2 2v6a2 2 0 002 2z" />
+        </svg>
+      )
     }
-  ];
+  };
+
+  const categoryBadgeClasses = {
+    equipment: 'bg-blue-100 text-blue-800',
+    emergency: 'bg-red-100 text-red-800',
+    hazards: 'bg-yellow-100 text-yellow-800',
+    compliance: 'bg-purple-100 text-purple-800'
+  };
+
+  const getCategoryLabel = (key) => categoryConfig[key]?.label || key;
 
   // Animation variants
   const containerVariants = {
@@ -84,24 +81,18 @@ const VideoLibrary = () => {
   };
 
   useEffect(() => {
-    // In a real app, we would fetch from the backend
-    // const fetchVideos = async () => {
-    //   try {
-    //     const response = await axios.get('/api/videos');
-    //     setVideos(response.data);
-    //   } catch (error) {
-    //     console.error('Error fetching videos:', error);
-    //   } finally {
-    //     setIsLoading(false);
-    //   }
-    // };
-    
-    // For prototype, use mock data
-    setTimeout(() => {
-      setVideos(mockVideos);
-      setIsLoading(false);
-    }, 800); // Simulate API delay
+    setVideos(playlistVideos);
+    setIsLoading(false);
   }, []);
+
+  const videoOfTheDay = useMemo(() => {
+    if (!videos.length) return null;
+    const today = new Date().toISOString().split('T')[0];
+    const hash = today
+      .split('')
+      .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return videos[hash % videos.length];
+  }, [videos]);
 
   const filteredVideos = filter === 'all' 
     ? videos 
@@ -201,6 +192,59 @@ const VideoLibrary = () => {
         </motion.div>
       </div>
       
+      {/* Video of the Day */}
+      {videoOfTheDay && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="glass-card rounded-2xl shadow-xl p-6 mb-8 border border-white border-opacity-20 bg-gradient-to-r from-yellow-100 via-white to-blue-50"
+        >
+          <div className="flex flex-col lg:flex-row gap-6 items-start">
+            <div className="flex-1">
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 uppercase tracking-wider">
+                Video of the Day
+              </span>
+              <h2 className="text-2xl font-bold text-gray-900 mt-3">{videoOfTheDay.title}</h2>
+              <p className="text-gray-700 mt-2">{videoOfTheDay.description}</p>
+              <div className="flex flex-wrap gap-3 mt-4 text-sm">
+                <span className="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {videoOfTheDay.duration || 'Short Watch'}
+                </span>
+                <span className="inline-flex items-center px-3 py-1 rounded-full bg-indigo-100 text-indigo-800">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                  </svg>
+                  {getCategoryLabel(videoOfTheDay.category)}
+                </span>
+              </div>
+              <button
+                onClick={() => handleVideoSelect(videoOfTheDay)}
+                className="mt-5 inline-flex items-center px-5 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-semibold shadow hover:shadow-lg transition-all"
+              >
+                Watch today’s spotlight
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              </button>
+            </div>
+            <div className="w-full lg:w-1/2 rounded-xl overflow-hidden border border-white border-opacity-30 shadow-lg bg-black">
+              <ReactPlayer
+                url={videoOfTheDay.url}
+                width="100%"
+                height="240px"
+                light={videoOfTheDay.thumbnail}
+                playing={false}
+                controls={false}
+              />
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       {/* Category Filter */}
       <motion.div 
         variants={containerVariants}
@@ -226,55 +270,23 @@ const VideoLibrary = () => {
           >
             All Videos
           </motion.button>
-          <motion.button
-            variants={itemVariants}
-            onClick={() => setFilter('equipment')}
-            className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-105 ${
-              filter === 'equipment' 
-                ? 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-md' 
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
-            }`}
-          >
-            <span className="flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              Equipment
-            </span>
-          </motion.button>
-          <motion.button
-            variants={itemVariants}
-            onClick={() => setFilter('emergency')}
-            className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-105 ${
-              filter === 'emergency' 
-                ? 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-md' 
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
-            }`}
-          >
-            <span className="flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              Emergency
-            </span>
-          </motion.button>
-          <motion.button
-            variants={itemVariants}
-            onClick={() => setFilter('hazards')}
-            className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-105 ${
-              filter === 'hazards' 
-                ? 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-md' 
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
-            }`}
-          >
-            <span className="flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              Hazards
-            </span>
-          </motion.button>
+          {Object.entries(categoryConfig).map(([key, meta]) => (
+            <motion.button
+              key={key}
+              variants={itemVariants}
+              onClick={() => setFilter(key)}
+              className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-105 ${
+                filter === key
+                  ? 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-md'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
+              }`}
+            >
+              <span className="flex items-center">
+                {meta.icon}
+                {meta.label}
+              </span>
+            </motion.button>
+          ))}
         </div>
       </motion.div>
       
@@ -308,13 +320,13 @@ const VideoLibrary = () => {
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                {selectedVideo.duration}
+                {selectedVideo.duration || 'Short Watch'}
               </span>
               <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                 </svg>
-                {selectedVideo.category}
+                {getCategoryLabel(selectedVideo.category)}
               </span>
             </div>
             <p className="text-gray-700 mt-2 text-lg">{selectedVideo.description}</p>
@@ -358,15 +370,13 @@ const VideoLibrary = () => {
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                {video.duration}
+                {video.duration || 'Short Watch'}
               </div>
               <div className="absolute top-3 left-3">
                 <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${
-                  video.category === 'equipment' ? 'bg-blue-100 text-blue-800' :
-                  video.category === 'emergency' ? 'bg-red-100 text-red-800' :
-                  'bg-yellow-100 text-yellow-800'
+                  categoryBadgeClasses[video.category] || 'bg-gray-100 text-gray-800'
                 }`}>
-                  {video.category}
+                  {getCategoryLabel(video.category)}
                 </span>
               </div>
               <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-300">

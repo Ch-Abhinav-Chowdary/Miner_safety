@@ -25,6 +25,16 @@ const hazardSchema = new mongoose.Schema({
   imageUrl: {
     type: String
   },
+  severity: {
+    type: String,
+    enum: ['low', 'medium', 'high', 'critical'],
+    default: 'medium'
+  },
+  category: {
+    type: String,
+    enum: ['electrical', 'mechanical', 'chemical', 'biological', 'physical', 'environmental', 'other'],
+    default: 'physical'
+  },
   reportedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',

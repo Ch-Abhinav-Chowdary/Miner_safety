@@ -1,49 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import api from '../../utils/axiosConfig';
+import { toast } from 'react-toastify';
 
 const IncidentLibrary = () => {
   const [filter, setFilter] = useState('all');
+  const [incidents, setIncidents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   
-  // Mock incident data
-  const incidents = [
-    {
-      id: 1,
-      title: 'Equipment Malfunction',
-      description: 'Conveyor belt failure in Section A caused minor delays',
-      date: '2023-10-15',
-      severity: 'Medium',
-      status: 'Resolved',
-      location: 'Section A, Level 2'
-    },
-    {
-      id: 2,
-      title: 'Minor Flooding',
-      description: 'Water leak from drainage system affected lower tunnel access',
-      date: '2023-09-28',
-      severity: 'High',
-      status: 'Resolved',
-      location: 'Lower Tunnel, Section C'
-    },
-    {
-      id: 3,
-      title: 'Ventilation System Failure',
-      description: 'Temporary ventilation issue required evacuation of east wing',
-      date: '2023-11-02',
-      severity: 'High',
-      status: 'Under Investigation',
-      location: 'East Wing, Level 3'
-    },
-    {
-      id: 4,
-      title: 'Minor Injury',
-      description: 'Worker sustained minor cut while handling equipment',
-      date: '2023-10-22',
-      severity: 'Low',
-      status: 'Resolved',
-      location: 'Workshop, Main Level'
-    }
-  ];
+  // Fetch incidents from API
+  useEffect(() => {
+    const fetchIncidents = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get('/incidents');
+        if (response.data.success) {
+          setIncidents(response.data.data);
+        } else {
+          setError('Failed to fetch incidents');
+        }
+      } catch (err) {
+        console.error('Error fetching incidents:', err);
+        setError(err.response?.data?.message || 'Failed to load incidents');
+        toast.error('Failed to load incidents. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchIncidents();
+  }, []);
 
   // Animation variants
   const containerVariants = {
@@ -71,7 +59,12 @@ const IncidentLibrary = () => {
   // Filter incidents based on selected filter
   const filteredIncidents = filter === 'all' 
     ? incidents 
-    : incidents.filter(incident => incident.status.toLowerCase() === filter.toLowerCase());
+    : incidents.filter(incident => {
+        const statusLower = incident.status.toLowerCase();
+        const filterLower = filter.toLowerCase();
+        return statusLower === filterLower || 
+               (filterLower === 'under investigation' && statusLower.includes('investigation'));
+      });
 
   return (
     <motion.div 
@@ -198,8 +191,48 @@ const IncidentLibrary = () => {
         </div>
       </motion.div>
 
+      {/* Loading State */}
+      {loading && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="glass-card rounded-xl shadow-lg p-12 text-center border border-white border-opacity-20 bg-gradient-to-br from-white to-gray-50"
+        >
+          <div className="flex flex-col items-center">
+            <svg className="animate-spin h-12 w-12 text-red-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p className="text-gray-600 text-lg">Loading incidents...</p>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Error State */}
+      {error && !loading && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="glass-card rounded-xl shadow-lg p-12 text-center border border-red-200 bg-red-50"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto text-red-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p className="text-red-600 text-xl mb-4">{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors inline-flex items-center"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Retry
+          </button>
+        </motion.div>
+      )}
+
       {/* Incidents List */}
-      {filteredIncidents.length > 0 ? (
+      {!loading && !error && filteredIncidents.length > 0 ? (
         <motion.div 
           variants={containerVariants}
           initial="hidden"
@@ -213,10 +246,22 @@ const IncidentLibrary = () => {
               className="glass-card rounded-xl shadow-lg overflow-hidden cursor-pointer hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-white border-opacity-20 bg-gradient-to-br from-white to-gray-50"
             >
               <div className={`h-2 ${
-                incident.severity === 'High' ? 'bg-gradient-to-r from-red-600 to-red-400' : 
+                incident.severity === 'High' || incident.severity === 'Critical' ? 'bg-gradient-to-r from-red-600 to-red-400' : 
                 incident.severity === 'Medium' ? 'bg-gradient-to-r from-yellow-500 to-yellow-300' : 
                 'bg-gradient-to-r from-green-500 to-green-300'
               }`}></div>
+              {incident.imageUrl && (
+                <div className="w-full h-48 overflow-hidden">
+                  <img 
+                    src={incident.imageUrl} 
+                    alt={incident.title}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                    }}
+                  />
+                </div>
+              )}
               <div className="p-6">
                 <div className="flex justify-between items-start mb-3">
                   <h3 className="text-xl font-bold text-gray-800">{incident.title}</h3>
@@ -261,7 +306,7 @@ const IncidentLibrary = () => {
                     <div>
                       <p className="text-xs text-gray-500">Severity</p>
                       <p className={`font-medium text-sm ${
-                        incident.severity === 'High' ? 'text-red-600' : 
+                        incident.severity === 'High' || incident.severity === 'Critical' ? 'text-red-600' : 
                         incident.severity === 'Medium' ? 'text-yellow-600' : 
                         'text-green-600'
                       }`}>{incident.severity}</p>
@@ -293,7 +338,7 @@ const IncidentLibrary = () => {
             </motion.div>
           ))}
         </motion.div>
-      ) : (
+      ) : !loading && !error ? (
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -302,18 +347,34 @@ const IncidentLibrary = () => {
           <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <p className="text-gray-500 text-xl mb-4">No incidents found matching your filter.</p>
-          <button 
-            onClick={() => setFilter('all')} 
-            className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors inline-flex items-center"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-            </svg>
-            View all incidents
-          </button>
+          <p className="text-gray-500 text-xl mb-4">
+            {incidents.length === 0 
+              ? 'No incidents reported yet. Be the first to report a hazard!' 
+              : 'No incidents found matching your filter.'}
+          </p>
+          {incidents.length === 0 ? (
+            <Link 
+              to="/hazard-reporting" 
+              className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors inline-flex items-center"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              Report a Hazard
+            </Link>
+          ) : (
+            <button 
+              onClick={() => setFilter('all')} 
+              className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors inline-flex items-center"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+              </svg>
+              View all incidents
+            </button>
+          )}
         </motion.div>
-      )}
+      ) : null}
     </motion.div>
   );
 };
