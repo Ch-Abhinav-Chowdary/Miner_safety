@@ -28,24 +28,38 @@ const formatDateKey = (date) => {
 const clampScore = (value) => Math.max(0, Math.min(100, value));
 
 const computeComplianceScore = (metrics) => {
-  const checklistScore = metrics.checklistCompletionRate || (metrics.checklistsCompleted > 0 ? 100 : 0);
-  const videoScore = metrics.videosStarted
-    ? clampScore((metrics.videosCompleted / metrics.videosStarted) * 100)
-    : 0;
-  const quizScore = clampScore(metrics.quizAverageScore || 0);
-  const ppeScore = (metrics.ppeChecksPassed || metrics.ppeChecksFailed)
-    ? clampScore((metrics.ppeChecksPassed / ((metrics.ppeChecksPassed || 0) + (metrics.ppeChecksFailed || 0))) * 100)
-    : clampScore((metrics.ppeChecksPassed || 0) * 20);
-  const hazardScore = clampScore((metrics.hazardsReported || 0) * 10);
-  const engagementScore = clampScore((metrics.engagementMinutes || 0) * 5);
+  // Safety compliance score is now based ONLY on:
+  // - Safety checklist completion
+  // - Time spent watching training videos
+  // - Reporting hazards
+  // - Quiz scores from safety case studies
 
+  // Checklist: use completion rate if available, otherwise give full
+  // credit if at least one checklist was fully completed.
+  const checklistScore = metrics.checklistCompletionRate || (metrics.checklistsCompleted > 0 ? 100 : 0);
+
+  // Video watch time: derive from engagement minutes (driven by video progress
+  // and completion events). Cap full credit at ~20 minutes of watch time per day.
+  const videoWatchScore = clampScore((metrics.engagementMinutes || 0) * 5); // 20 minutes => 100
+
+  // Hazard reporting: reward proactive hazard reporting, capped so a few
+  // reports give full credit.
+  const hazardScore = clampScore((metrics.hazardsReported || 0) * 10); // 10 hazards => 100
+
+  // Quiz performance from case studies (and other safety quizzes that log
+  // quiz_completed with a score in metadata.score).
+  const quizScore = clampScore(metrics.quizAverageScore || 0);
+
+  // Weighting:
+  // - 40% checklist adherence
+  // - 25% video watch time
+  // - 15% hazard reporting
+  // - 20% quiz performance
   return Math.round(
-    0.35 * checklistScore +
-    0.2 * videoScore +
-    0.15 * quizScore +
-    0.15 * ppeScore +
-    0.1 * hazardScore +
-    0.05 * engagementScore
+    0.4 * checklistScore +
+    0.25 * videoWatchScore +
+    0.15 * hazardScore +
+    0.2 * quizScore
   );
 };
 
@@ -91,8 +105,16 @@ const ensureAlert = async (userId, snapshotDate, type, severity, message, metada
   });
 };
 
-const updateDailySnapshot = async (userId, type, metadata = {}, occurredAt = new Date()) => {
+export const updateDailySnapshot = async (userId, type, metadata = {}, occurredAt = new Date()) => {
   const dateKey = formatDateKey(occurredAt);
+
+  // Only mine workers should have a safety compliance score and daily snapshot.
+  // Skip snapshot creation & scoring for supervisors, admins, and DGMS officers.
+  const user = await User.findById(userId).select('role');
+  if (!user || user.role !== 'worker') {
+    return null;
+  }
+
   let snapshot = await DailyComplianceSnapshot.findOne({ user: userId, date: dateKey });
   const isNewSnapshot = !snapshot;
 
@@ -305,7 +327,8 @@ export const getSupervisorBehaviorOverview = async (req, res) => {
       DailyComplianceSnapshot
         .find({ date: { $gte: startDate, $lte: endDate } })
         .populate('user', 'name role email'),
-      User.countDocuments({ role: { $in: ['worker', 'supervisor'] } }),
+      // Only count mine workers when reporting safety compliance and risk
+      User.countDocuments({ role: 'worker' }),
       BehaviorAlert.find({ status: 'open' })
         .populate('user', 'name email role')
         .sort({ createdAt: -1 })
@@ -336,11 +359,14 @@ export const getSupervisorBehaviorOverview = async (req, res) => {
       ]),
     ]);
 
-    const averageScore = snapshots.length
-      ? Math.round(snapshots.reduce((acc, snap) => acc + (snap.complianceScore || 0), 0) / snapshots.length)
+    // Only compute averages over workers; filter out non-worker roles.
+    const workerSnapshots = snapshots.filter((snap) => snap.user?.role === 'worker');
+
+    const averageScore = workerSnapshots.length
+      ? Math.round(workerSnapshots.reduce((acc, snap) => acc + (snap.complianceScore || 0), 0) / workerSnapshots.length)
       : 0;
 
-    const todaySnapshots = snapshots.filter((snap) => snap.date === endDate);
+    const todaySnapshots = workerSnapshots.filter((snap) => snap.date === endDate);
     const highRisk = todaySnapshots.filter((snap) => snap.riskLevel === 'high');
     const lowRisk = todaySnapshots.filter((snap) => snap.riskLevel === 'low');
     const inactiveWorkers = Math.max(totalWorkers - todaySnapshots.length, 0);

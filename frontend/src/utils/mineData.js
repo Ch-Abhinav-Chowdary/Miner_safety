@@ -253,3 +253,19 @@ export const getWorkerStatusColor = (status) => {
       return '#3b82f6'; // blue
   }
 };
+
+// Map backend risk levels to colors for the 3D predictive heatmap
+export const getRiskLevelColor = (riskLevel) => {
+  switch (riskLevel?.toUpperCase()) {
+    case 'LOW':
+      return '#22c55e'; // green
+    case 'MEDIUM':
+      return '#eab308'; // yellow
+    case 'HIGH':
+      return '#f97316'; // orange
+    case 'CRITICAL':
+      return '#ef4444'; // red
+    default:
+      return '#6b7280'; // gray
+  }
+};

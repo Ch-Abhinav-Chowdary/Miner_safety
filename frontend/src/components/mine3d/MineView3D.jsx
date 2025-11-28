@@ -4,6 +4,7 @@ import { OrbitControls, PerspectiveCamera, Environment, Sky } from '@react-three
 import Worker3D from './Worker3D';
 import DangerZone3D from './DangerZone3D';
 import MineStructure3D from './MineStructure3D';
+import RiskZone3D from './RiskZone3D';
 
 const MineView3D = ({ 
   workers, 
@@ -11,6 +12,8 @@ const MineView3D = ({
   tunnels, 
   onWorkerClick, 
   onDangerZoneClick,
+  riskZones = [],
+  onRiskZoneClick,
   cameraPosition = [40, 20, 40]
 }) => {
   return (
@@ -77,12 +80,21 @@ const MineView3D = ({
             />
           ))}
 
-          {/* Danger Zones */}
+          {/* Danger Zones - static / sensor-based */}
           {dangerZones.map((zone) => (
             <DangerZone3D
               key={zone.id}
               zone={zone}
               onClick={onDangerZoneClick}
+            />
+          ))}
+
+          {/* AI-predicted Risk Zones (admin only, passed from parent) */}
+          {Array.isArray(riskZones) && riskZones.map((rz) => (
+            <RiskZone3D
+              key={rz.id ?? rz.zoneId}
+              riskZone={rz}
+              onClick={onRiskZoneClick}
             />
           ))}
         </Suspense>

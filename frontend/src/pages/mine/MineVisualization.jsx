@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useContext } from 'react';
 import { FaUsers, FaExclamationTriangle, FaCog, FaExpand, FaCompress, FaEye } from 'react-icons/fa';
 import { MdPerson, MdWarning } from 'react-icons/md';
 import MineView3D from '../../components/mine3d/MineView3D';
@@ -9,13 +9,22 @@ import {
   getWorkerStatusColor,
   getSeverityColor,
 } from '../../utils/mineData';
+import { AuthContext } from '../../context/AuthContext';
+import api from '../../utils/axiosConfig';
 
 const MineVisualization = () => {
+  const { user } = useContext(AuthContext);
+  const isAdmin = user?.role === 'admin';
+
   const [tunnels] = useState(generateMineStructure());
   const [workers, setWorkers] = useState(generateWorkers());
   const [dangerZones, setDangerZones] = useState(generateDangerZones());
+  const [riskZones, setRiskZones] = useState([]);
+
   const [selectedWorker, setSelectedWorker] = useState(null);
   const [selectedZone, setSelectedZone] = useState(null);
+  const [selectedRiskZone, setSelectedRiskZone] = useState(null);
+
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showLeftSidebar, setShowLeftSidebar] = useState(true);
   const [showRightSidebar, setShowRightSidebar] = useState(true);
@@ -23,8 +32,11 @@ const MineVisualization = () => {
   const [viewMode, setViewMode] = useState('overview'); // overview, workers, dangers
   const [currentLevel, setCurrentLevel] = useState('all'); // all, surface, level1, level2
   const [cameraAngle, setCameraAngle] = useState('default'); // default, top, side, front
-  const cameraKey = useRef(0); // Force camera update
+  const [showRiskHeatmap, setShowRiskHeatmap] = useState(false);
+  const [riskLoading, setRiskLoading] = useState(false);
+  const [riskError, setRiskError] = useState(null);
 
+  const cameraKey = useRef(0); // Force camera update
   useEffect(() => {
     // Simulate real-time updates
     const interval = setInterval(() => {
@@ -44,11 +56,19 @@ const MineVisualization = () => {
   const handleWorkerClick = (worker) => {
     setSelectedWorker(worker);
     setSelectedZone(null);
+    setSelectedRiskZone(null);
   };
 
   const handleDangerZoneClick = (zone) => {
     setSelectedZone(zone);
     setSelectedWorker(null);
+    setSelectedRiskZone(null);
+  };
+
+  const handleRiskZoneClick = (riskZone) => {
+    setSelectedRiskZone(riskZone);
+    setSelectedWorker(null);
+    setSelectedZone(null);
   };
 
   const toggleFullscreen = () => {
@@ -61,6 +81,29 @@ const MineVisualization = () => {
     }
   };
 
+  // Fetch predictive AI risk zones when admin toggles heatmap on
+  useEffect(() => {
+    const fetchRisk = async () => {
+      if (!isAdmin || !showRiskHeatmap) return;
+      setRiskLoading(true);
+      setRiskError(null);
+      try {
+        const { data } = await api.get('/mine/risk', {
+          params: { horizonHours: 24 },
+        });
+        // Expect backend to return an array of risk zones with position, radius, riskLevel, riskScore, etc.
+        setRiskZones(Array.isArray(data) ? data : data?.zones || []);
+      } catch (error) {
+        console.error('Failed to load AI risk predictions:', error);
+        setRiskError('Unable to load AI risk predictions');
+        setRiskZones([]);
+      } finally {
+        setRiskLoading(false);
+      }
+    };
+
+    fetchRisk();
+  }, [isAdmin, showRiskHeatmap]);
   const getCameraPosition = () => {
     // Camera angle presets
     if (cameraAngle === 'top') {
@@ -128,6 +171,22 @@ const MineVisualization = () => {
                 </div>
                 <div className="text-xs text-gray-400">Warnings</div>
               </div>
+              {isAdmin && (
+                <div className="text-center">
+                  <div className="text-xs text-gray-400 mb-1">AI Risk Zones</div>
+                  <button
+                    onClick={() => setShowRiskHeatmap((prev) => !prev)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+                      showRiskHeatmap
+                        ? 'bg-blue-600 text-white border-blue-400 shadow-md'
+                        : 'bg-gray-800 text-gray-200 border-gray-600 hover:bg-gray-700'
+                    }`}
+                    title="Toggle AI-predicted risk heatmap (admins only)"
+                  >
+                    {riskLoading ? 'Loading…' : showRiskHeatmap ? 'Hide AI risk' : 'Show AI risk'}
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Camera Angle Quick Buttons */}
@@ -358,6 +417,8 @@ const MineVisualization = () => {
             tunnels={tunnels}
             onWorkerClick={handleWorkerClick}
             onDangerZoneClick={handleDangerZoneClick}
+            riskZones={isAdmin && showRiskHeatmap ? riskZones : []}
+            onRiskZoneClick={isAdmin ? handleRiskZoneClick : undefined}
             cameraPosition={getCameraPosition()}
           />
 
@@ -426,7 +487,7 @@ const MineVisualization = () => {
         </div>
 
         {/* Right Sidebar - Details */}
-        {(selectedWorker || selectedZone) && (
+        {(selectedWorker || selectedZone || selectedRiskZone) && (
           <div className="w-72 lg:w-80 bg-gray-800 border-l border-gray-700 overflow-y-auto flex-shrink-0 z-20">
             <div className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
             <div className="p-4">
@@ -566,6 +627,56 @@ const MineVisualization = () => {
                     <div>
                       <label className="text-gray-400 text-sm">Affected Radius</label>
                       <div className="text-white">{selectedZone.radius}m</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {selectedRiskZone && (
+                <div className="mt-6 border-t border-gray-700 pt-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                      <span className="text-blue-400">⚠️</span> AI Risk Zone Details
+                    </h3>
+                    <button
+                      onClick={() => setSelectedRiskZone(null)}
+                      className="text-gray-400 hover:text-white"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  <div className="space-y-4 text-sm">
+                    <div>
+                      <label className="text-gray-400 text-xs">Zone ID</label>
+                      <div className="text-white font-mono">
+                        {selectedRiskZone.zoneId || selectedRiskZone.id}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-gray-400 text-xs">Risk Level</label>
+                      <div className="text-white font-semibold">
+                        {selectedRiskZone.riskLevel} ({(selectedRiskZone.riskScore * 100).toFixed(0)}% confidence)
+                      </div>
+                    </div>
+
+                    {Array.isArray(selectedRiskZone.topReasons) && selectedRiskZone.topReasons.length > 0 && (
+                      <div>
+                        <label className="text-gray-400 text-xs">Top contributing factors</label>
+                        <ul className="mt-1 list-disc list-inside text-gray-200 space-y-0.5">
+                          {selectedRiskZone.topReasons.slice(0, 4).map((reason, idx) => (
+                            <li key={idx}>{reason}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="text-gray-400 text-xs">Predicted risk window</label>
+                      <div className="text-gray-300">
+                        Next 24 hours (from latest model run)
+                      </div>
                     </div>
                   </div>
                 </div>

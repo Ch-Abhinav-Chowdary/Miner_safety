@@ -33,6 +33,8 @@ const AdminDashboard = () => {
   const { user } = useContext(AuthContext);
   const [missedAlerts, setMissedAlerts] = useState([]);
   const [alertsLoading, setAlertsLoading] = useState(false);
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
 
   const videoOfTheDay = useMemo(() => {
     if (!playlistVideos.length) return null;
@@ -65,6 +67,46 @@ const AdminDashboard = () => {
     };
 
     fetchAlerts();
+    return () => {
+      isMounted = false;
+    };
+  }, [user]);
+
+  useEffect(() => {
+    const allowedRoles = ['admin', 'supervisor', 'dgms_officer'];
+    if (!user || !allowedRoles.includes(user.role)) {
+      return;
+    }
+
+    let isMounted = true;
+    const fetchLeaderboard = async () => {
+      setLeaderboardLoading(true);
+      try {
+        const { data } = await api.get('/behavior/supervisor/overview?range=7');
+        const topWorkers = data?.data?.topCompliantWorkers || [];
+
+        if (isMounted) {
+          setLeaderboard(
+            topWorkers.map((snap, index) => ({
+              id: snap._id || index,
+              name: snap.user?.name || 'Unknown worker',
+              role: snap.user?.role || 'worker',
+              complianceScore: snap.complianceScore ?? 0,
+              riskLevel: snap.riskLevel || 'medium',
+              streakCount: snap.streakCount || 0,
+            }))
+          );
+        }
+      } catch (error) {
+        console.error('Failed to fetch compliance leaderboard:', error);
+      } finally {
+        if (isMounted) {
+          setLeaderboardLoading(false);
+        }
+      }
+    };
+
+    fetchLeaderboard();
     return () => {
       isMounted = false;
     };
@@ -123,23 +165,9 @@ const AdminDashboard = () => {
 
       <motion.div
         variants={itemVariants}
-        className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"
+        className="mb-8"
       >
-        <HazardOversight />
-        <ContentPipeline />
-      </motion.div>
-
-      <motion.div 
-        variants={itemVariants}
-        className="glass-card rounded-2xl shadow-lg p-6 border border-white border-opacity-20 bg-gradient-to-br from-white to-gray-50 mb-8"
-      >
-        <SectionHeading title="Administrative quick links" subtitle="Keep compliance controls close." />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-          <AdminLink to="/user-management" color="from-blue-500 to-blue-600" label="User Management" />
-          <AdminLink to="/site-settings" color="from-purple-500 to-purple-600" label="Site Settings" />
-          <AdminLink to="/reports" color="from-green-500 to-green-600" label="Compliance Reports" />
-          <AdminLink to="/audit-logs" color="from-gray-500 to-gray-600" label="Audit Logs" />
-        </div>
+        <ComplianceLeaderboard leaderboard={leaderboard} loading={leaderboardLoading} />
       </motion.div>
     </motion.div>
   );
@@ -309,44 +337,59 @@ const MissedChecklistAlerts = ({ alerts, loading, onAcknowledge }) => (
   </div>
 );
 
-const HazardOversight = () => (
+const ComplianceLeaderboard = ({ leaderboard, loading }) => (
   <div className="glass-card rounded-2xl shadow-lg p-6 border border-white border-opacity-20 bg-gradient-to-br from-white to-gray-50">
-    <SectionHeading title="Hazard oversight" subtitle="Photo / voice reports needing intervention." />
-    <div className="mt-4 space-y-4">
-      {hazardQueue.map((hazard) => (
-        <div key={hazard.id} className="rounded-xl border border-gray-100 p-4 bg-white shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-semibold text-gray-800">{hazard.type}</p>
-              <p className="text-xs text-gray-500">{hazard.location}</p>
-            </div>
-            <span className="text-xs px-3 py-1 rounded-full bg-yellow-50 text-yellow-700">{hazard.status}</span>
-          </div>
-          <p className="text-xs text-gray-500 mt-2">Submitted by {hazard.submittedBy}</p>
-          <div className="mt-3 flex gap-2">
-            <button className="text-xs px-3 py-1 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200">Review media</button>
-            <button className="text-xs px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 hover:bg-indigo-200">Assign response</button>
-          </div>
-        </div>
-      ))}
-    </div>
-  </div>
-);
-
-const ContentPipeline = () => (
-  <div className="glass-card rounded-2xl shadow-lg p-6 border border-white border-opacity-20 bg-gradient-to-br from-white to-gray-50">
-    <SectionHeading title="Safety content pipeline" subtitle="DGMS advisories, case studies, and testimonials." />
-    <div className="mt-4 space-y-4">
-      {contentPipeline.map((item) => (
-        <div key={item.id} className="rounded-xl border border-gray-100 p-4 bg-white shadow-sm">
-          <div className="flex items-center justify-between">
-            <p className="font-semibold text-gray-800">{item.title}</p>
-            <span className="text-xs px-3 py-1 rounded-full bg-blue-50 text-blue-700">{item.status}</span>
-          </div>
-          <p className="text-xs text-gray-500 mt-1">Source: {item.source}</p>
-        </div>
-      ))}
-    </div>
+    <SectionHeading
+      title="Safety compliance leaderboard"
+      subtitle="Top mine workers by daily safety compliance score."
+    />
+    {loading ? (
+      <p className="text-gray-500 mt-4">Loading leaderboard...</p>
+    ) : !leaderboard.length ? (
+      <p className="text-gray-500 mt-4">No worker compliance data available yet.</p>
+    ) : (
+      <div className="mt-4 overflow-x-auto">
+        <table className="min-w-full text-sm">
+          <thead>
+            <tr className="text-left text-gray-500 border-b border-gray-100">
+              <th className="py-2 pr-4">Rank</th>
+              <th className="py-2 pr-4">Worker</th>
+              <th className="py-2 pr-4">Score</th>
+              <th className="py-2 pr-4">Risk</th>
+              <th className="py-2 pr-4">Streak</th>
+            </tr>
+          </thead>
+          <tbody>
+            {leaderboard.map((row, index) => (
+              <tr key={row.id} className="border-b border-gray-50 last:border-0">
+                <td className="py-2 pr-4 font-semibold text-gray-700">#{index + 1}</td>
+                <td className="py-2 pr-4">
+                  <div className="font-medium text-gray-900">{row.name}</div>
+                  <div className="text-xs text-gray-500 capitalize">{row.role}</div>
+                </td>
+                <td className="py-2 pr-4 font-semibold text-gray-900">{row.complianceScore}</td>
+                <td className="py-2 pr-4">
+                  <span
+                    className={`inline-flex px-2 py-1 rounded-full text-xs ${
+                      row.riskLevel === 'low'
+                        ? 'bg-green-50 text-green-700'
+                        : row.riskLevel === 'high'
+                        ? 'bg-red-50 text-red-700'
+                        : 'bg-yellow-50 text-yellow-700'
+                    }`}
+                  >
+                    {row.riskLevel}
+                  </span>
+                </td>
+                <td className=\"py-2 pr-4 text-xs text-gray-700\">\r
+                  {row.streakCount ? `${row.streakCount} day streak` : '—'}\r
+                </td>\r
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
   </div>
 );
 
@@ -355,21 +398,6 @@ const SectionHeading = ({ title, subtitle }) => (
     <h2 className="text-2xl font-bold text-gray-800">{title}</h2>
     <p className="text-sm text-gray-500">{subtitle}</p>
   </div>
-);
-
-const AdminLink = ({ to, color, label }) => (
-  <Link
-    to={to}
-    className={`flex items-center justify-between p-4 bg-gradient-to-r ${color} text-white rounded-xl shadow-md hover:shadow-lg transform transition-all duration-300 hover:-translate-y-1`}
-  >
-    <div>
-      <p className="font-semibold">{label}</p>
-      <p className="text-xs opacity-80">Open module</p>
-    </div>
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-    </svg>
-  </Link>
 );
 
 const containerVariants = {

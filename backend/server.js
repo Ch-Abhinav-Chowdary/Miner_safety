@@ -21,7 +21,6 @@ import healthRoutes from './routes/health.js';
 import validateEnv from './config/validateEnv.js';
 import behaviorRoutes from './routes/behavior.js';
 import caseRoutes from './routes/case.js';
-import userRoutes from './routes/users.js';
 
 // Load environment variables
 dotenv.config();
@@ -91,7 +90,6 @@ app.use('/api/alerts', alertRoutes);
 app.use('/api/behavior', behaviorRoutes);
 app.use('/api/health', healthRoutes);
 app.use('/api/cases', caseRoutes);
-app.use('/api/users', userRoutes);
 
 // Root route
 app.get('/', (req, res) => {

@@ -211,49 +211,66 @@ const WorkerDashboard = () => {
         </motion.div>
       </motion.div>
       
-      {/* Quick Actions */}
+      {/* Quick Actions - icon-first, large tiles */}
       <motion.div 
         variants={itemVariants}
-        className="glass-card rounded-xl shadow-lg p-4 sm:p-8 border border-white border-opacity-20 bg-gradient-to-br from-white to-gray-50 mb-6 sm:mb-8"
+        className="glass-card rounded-2xl shadow-xl p-4 sm:p-6 border border-white/30 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 mb-6 sm:mb-8 text-white"
       >
-        <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-gray-800 flex items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 sm:h-6 sm:w-6 mr-2 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
-          Quick Actions
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <Link to="/daily-checklist" className="flex items-center p-3 sm:p-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl shadow-md hover:shadow-lg transform transition-all duration-300 hover:-translate-y-1">
-            <div className="p-2 bg-white bg-opacity-20 rounded-full mr-3">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="flex items-center justify-between mb-4 sm:mb-6">
+          <div className="flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 sm:h-6 sm:w-6 text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            <h2 className="text-lg sm:text-xl font-bold tracking-tight">Tap an action</h2>
+          </div>
+          <p className="hidden sm:block text-xs text-gray-300">Big buttons for faster work</p>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+          <Link
+            to="/hazard-reporting"
+            className="flex flex-col items-center justify-center gap-2 rounded-2xl bg-gradient-to-br from-red-600 to-orange-500 p-3 sm:p-4 hover-lift focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-400"
+          >
+            <span className="inline-flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-black/20 text-white text-2xl">
+              !
+            </span>
+            <span className="text-xs sm:text-sm font-semibold text-center">Hazard</span>
+          </Link>
+
+          <Link
+            to="/daily-checklist"
+            className="flex flex-col items-center justify-center gap-2 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 p-3 sm:p-4 hover-lift focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-400"
+          >
+            <span className="inline-flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-black/20 text-white">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
               </svg>
-            </div>
-            <span className="text-sm sm:text-base">Complete Daily Checklist</span>
+            </span>
+            <span className="text-xs sm:text-sm font-semibold text-center">Checklist</span>
           </Link>
-          <Link to="/hazard-reporting" className="flex items-center p-3 sm:p-4 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white rounded-xl shadow-md hover:shadow-lg transform transition-all duration-300 hover:-translate-y-1">
-            <div className="p-2 bg-white bg-opacity-20 rounded-full mr-3">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            </div>
-            <span className="text-sm sm:text-base">Report Hazard</span>
-          </Link>
-          <Link to="/video-library" className="flex items-center p-3 sm:p-4 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl shadow-md hover:shadow-lg transform transition-all duration-300 hover:-translate-y-1">
-            <div className="p-2 bg-white bg-opacity-20 rounded-full mr-3">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+
+          <Link
+            to="/video-library"
+            className="flex flex-col items-center justify-center gap-2 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 p-3 sm:p-4 hover-lift focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-400"
+          >
+            <span className="inline-flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-black/20 text-white">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
               </svg>
-            </div>
-            <span className="text-sm sm:text-base">Safety Videos</span>
+            </span>
+            <span className="text-xs sm:text-sm font-semibold text-center">Videos</span>
           </Link>
-          <Link to="/incident-library" className="flex items-center p-3 sm:p-4 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl shadow-md hover:shadow-lg transform transition-all duration-300 hover:-translate-y-1">
-            <div className="p-2 bg-white bg-opacity-20 rounded-full mr-3">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+
+          <Link
+            to="/incident-library"
+            className="flex flex-col items-center justify-center gap-2 rounded-2xl bg-gradient-to-br from-sky-500 to-cyan-500 p-3 sm:p-4 hover-lift focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-400"
+          >
+            <span className="inline-flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-black/20 text-white">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
               </svg>
-            </div>
-            <span className="text-sm sm:text-base">View Incidents</span>
+            </span>
+            <span className="text-xs sm:text-sm font-semibold text-center">Incidents</span>
           </Link>
         </div>
       </motion.div>
