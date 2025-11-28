@@ -29,6 +29,14 @@ const userSchema = new mongoose.Schema({
     enum: ['english', 'telugu', 'tamil', 'malayalam'],
     default: 'english'
   },
+  // New optional shift assignment fields, mainly for workers and supervisors
+  shiftLocation: {
+    type: String,
+    trim: true,
+  },
+  shiftDate: {
+    type: Date,
+  },
   createdAt: {
     type: Date,
     default: Date.now
