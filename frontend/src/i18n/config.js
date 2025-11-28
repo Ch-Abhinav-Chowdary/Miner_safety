@@ -39,6 +39,7 @@ const resources = {
         siteSettings: 'Site Settings',
         reports: 'Reports',
         auditLogs: 'Audit Logs',
+        sosAlerts: 'SOS Alerts',
         profile: 'Profile',
       },
       actions: {

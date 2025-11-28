@@ -381,9 +381,9 @@ const ComplianceLeaderboard = ({ leaderboard, loading }) => (
                     {row.riskLevel}
                   </span>
                 </td>
-                <td className=\"py-2 pr-4 text-xs text-gray-700\">\r
-                  {row.streakCount ? `${row.streakCount} day streak` : '—'}\r
-                </td>\r
+                <td className="py-2 pr-4 text-xs text-gray-700">
+                  {row.streakCount ? `${row.streakCount} day streak` : '—'}
+                </td>
               </tr>
             ))}
           </tbody>

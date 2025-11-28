@@ -163,12 +163,14 @@ const Navbar = ({ user, toggleSidebar, isSidebarOpen }) => {
               >
                 {t('nav.training')}
               </Link>
-              <Link 
-                to="/daily-checklist" 
-                className="px-4 py-2 rounded-lg text-gray-300 hover:text-white font-medium transition-all duration-300 hover:bg-white/10 backdrop-blur-sm border border-transparent hover:border-white/20 hover:shadow-lg"
-              >
-                {t('nav.checklists')}
-              </Link>
+              {(user?.role === 'worker' || user?.role === 'supervisor') && (
+                <Link 
+                  to="/daily-checklist" 
+                  className="px-4 py-2 rounded-lg text-gray-300 hover:text-white font-medium transition-all duration-300 hover:bg-white/10 backdrop-blur-sm border border-transparent hover:border-white/20 hover:shadow-lg"
+                >
+                  {t('nav.checklists')}
+                </Link>
+              )}
             </div>
 
             <div className="hidden lg:block">

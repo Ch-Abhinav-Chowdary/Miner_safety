@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { logBehaviorEvent } from '../../utils/behaviorTracker';
+import { getFallbackChecklist } from '../../data/checklistTemplates';
 
 const DailyChecklist = () => {
   const { user } = useContext(AuthContext);
@@ -17,6 +18,17 @@ const DailyChecklist = () => {
   const [showTips, setShowTips] = useState(false);
   const sessionStartRef = useRef(Date.now());
   const viewLoggedRef = useRef(false);
+
+  // Check if user has access to checklist (only workers and supervisors)
+  useEffect(() => {
+    if (user && !['worker', 'supervisor'].includes(user.role)) {
+      setChecklist(prev => ({
+        ...prev,
+        isLoading: false,
+        error: 'Checklist is only available for workers and supervisors.'
+      }));
+    }
+  }, [user]);
   
   // Animation variants
   const containerVariants = {
@@ -79,6 +91,16 @@ const DailyChecklist = () => {
         return;
       }
 
+      // Check if user has access (only workers and supervisors)
+      if (!['worker', 'supervisor'].includes(user.role)) {
+        setChecklist(prev => ({
+          ...prev,
+          isLoading: false,
+          error: 'Checklist is only available for workers and supervisors.'
+        }));
+        return;
+      }
+
       try {
         // Fetch role-based checklist from backend
         const token = localStorage.getItem('token');
@@ -122,12 +144,41 @@ const DailyChecklist = () => {
         }
       } catch (error) {
         console.error('Error fetching checklist:', error);
-        setChecklist(prev => ({
-          ...prev,
+        
+        // Use fallback checklist data if backend is unavailable
+        const userRole = user?.role || 'worker';
+        const currentUserId = user?._id || user?.id || 'guest';
+        
+        // Check localStorage for previously saved fallback checklist
+        const today = new Date().toISOString().split('T')[0];
+        const fallbackKey = `checklist_fallback_${currentUserId}_${today}`;
+        const savedFallback = localStorage.getItem(fallbackKey);
+        
+        let fallbackChecklist;
+        if (savedFallback) {
+          try {
+            fallbackChecklist = JSON.parse(savedFallback);
+            console.log('Loaded saved fallback checklist from localStorage');
+          } catch (e) {
+            console.error('Error parsing saved fallback checklist:', e);
+            fallbackChecklist = getFallbackChecklist(userRole);
+          }
+        } else {
+          fallbackChecklist = getFallbackChecklist(userRole);
+        }
+        
+        setChecklist({
+          items: fallbackChecklist.items || fallbackChecklist.items,
+          date: fallbackChecklist.date ? new Date(fallbackChecklist.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          checklistId: fallbackChecklist._id || 'fallback-checklist',
+          userRole: userRole,
           isLoading: false,
-          error: error.response?.data?.message || 'Failed to load checklist. Please try again.'
-        }));
-        toast.error('Failed to load your safety checklist');
+          error: null,
+          isFallback: true // Flag to indicate this is fallback data
+        });
+        
+        toast.warning('Using offline checklist. Some features may be limited.');
+        console.log('Using fallback checklist data for role:', userRole);
       }
     };
 
@@ -144,9 +195,33 @@ const DailyChecklist = () => {
       setChecklist(prev => ({
         ...prev,
         items: prev.items.map(item => 
-          item._id === itemId ? { ...item, completed: newCompletedState } : item
+          item._id === itemId ? { 
+            ...item, 
+            completed: newCompletedState,
+            completedAt: newCompletedState ? new Date() : null
+          } : item
         )
       }));
+
+      // If using fallback data, skip backend update
+      if (checklist.isFallback) {
+        // Store in localStorage for persistence
+        const currentUserId = user?._id || user?.id || 'guest';
+        const fallbackKey = `checklist_fallback_${currentUserId}_${checklist.date}`;
+        const updatedChecklist = {
+          ...checklist,
+          items: checklist.items.map(item => 
+            item._id === itemId ? { 
+              ...item, 
+              completed: newCompletedState,
+              completedAt: newCompletedState ? new Date() : null
+            } : item
+          )
+        };
+        localStorage.setItem(fallbackKey, JSON.stringify(updatedChecklist));
+        toast.info('Checklist updated locally (offline mode)');
+        return;
+      }
 
       // Update the backend
       const token = localStorage.getItem('token');
@@ -201,7 +276,14 @@ const DailyChecklist = () => {
       }
     } catch (error) {
       console.error('Error updating checklist item:', error);
-      // Revert the optimistic update
+      
+      // If using fallback mode, the update already happened locally
+      if (checklist.isFallback) {
+        // Already handled in the fallback section above
+        return;
+      }
+      
+      // Revert the optimistic update (only for backend mode)
       setChecklist(prev => ({
         ...prev,
         items: prev.items.map(item => 
@@ -217,6 +299,27 @@ const DailyChecklist = () => {
     const completedItems = checklist.items.filter(item => item.completed).length;
     return Math.round((completedItems / checklist.items.length) * 100);
   };
+
+  // Show error if user doesn't have access
+  if (checklist.error && !['worker', 'supervisor'].includes(user?.role)) {
+    return (
+      <div className="container mx-auto px-4 py-8 mt-10">
+        <div className="max-w-2xl mx-auto bg-red-50 border border-red-200 rounded-lg p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <h2 className="text-xl font-bold text-red-800">Access Restricted</h2>
+          </div>
+          <p className="text-red-700 mb-4">{checklist.error}</p>
+          <p className="text-sm text-red-600">
+            The safety checklist is only available for workers and supervisors. 
+            If you believe this is an error, please contact your administrator.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (checklist.isLoading) {
     return (

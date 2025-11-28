@@ -31,6 +31,7 @@ import CaseStudyDetail from './pages/cases/CaseStudyDetail';
 import UserManagement from './pages/admin/UserManagement';
 import Reports from './pages/admin/Reports';
 import AuditLogs from './pages/admin/AuditLogs';
+import SOSAlertsManagement from './pages/admin/SOSAlertsManagement';
 
 function App() {
   const { isAuthenticated, user, loading } = useContext(AuthContext);
@@ -71,6 +72,7 @@ function App() {
           {/* Admin Routes */}
           <Route path="/admin/user-management" element={<UserManagement />} />
           <Route path="/admin/reports" element={<Reports />} />
+          <Route path="/admin/sos-alerts" element={<SOSAlertsManagement />} />
         </Route>
       </Route>
     </Routes>

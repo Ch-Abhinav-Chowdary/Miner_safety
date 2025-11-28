@@ -3,6 +3,8 @@ import { useContext, useState, useEffect } from 'react';
 import { AuthContext } from '../../context/AuthContext';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
+import SOSButton from '../sos/SOSButton';
+import SOSNotification from '../sos/SOSNotification';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Layout = () => {
@@ -78,6 +80,10 @@ const Layout = () => {
           </div>
         </main>
       </div>
+      
+      {/* SOS Components */}
+      <SOSButton />
+      <SOSNotification />
     </div>
   );
 };

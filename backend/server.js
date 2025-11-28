@@ -9,18 +9,21 @@ import rateLimit from 'express-rate-limit';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
-// Import routes (will create these files next)
+// Import routes
 import authRoutes from './routes/auth.js';
 import checklistRoutes from './routes/checklist.js';
 import videoRoutes from './routes/video.js';
 import hazardRoutes from './routes/hazard.js';
 import incidentRoutes from './routes/incident.js';
 import alertRoutes from './routes/alert.js';
-/* import behaviorRoutes from './routes/behavior.js'; */
-import healthRoutes from './routes/health.js';
-import validateEnv from './config/validateEnv.js';
 import behaviorRoutes from './routes/behavior.js';
+import healthRoutes from './routes/health.js';
 import caseRoutes from './routes/case.js';
+import mineRoutes from './routes/mine.js';
+import userRoutes from './routes/users.js';
+import sosRoutes from './routes/sos.js';
+import validateEnv from './config/validateEnv.js';
+import { setIOInstance } from './controllers/sosController.js';
 
 // Load environment variables
 dotenv.config();
@@ -28,7 +31,7 @@ validateEnv();
 
 // Initialize Express app
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 // Create HTTP server and Socket.IO instance
 const httpServer = createServer(app);
@@ -39,10 +42,13 @@ const io = new Server(httpServer, {
   }
 });
 
+// Set up SOS controller with io instance (must be done immediately after io is created)
+setIOInstance(io);
+
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5174',
+  origin: process.env.CLIENT_URL || 'http://localhost:5173',
   credentials: true
 }));
 const apiLimiter = rateLimit({
@@ -78,6 +84,12 @@ io.on('connection', (socket) => {
     socket.join(role);
     console.log(`User ${socket.id} joined room: ${role}`);
   });
+
+  // Handle SOS emergency alerts
+  socket.on('sos-emergency', (data) => {
+    console.log('SOS emergency received:', data);
+    // This is handled by the API endpoint, but we can also listen here for direct socket triggers
+  });
 });
 
 // Routes
@@ -90,6 +102,9 @@ app.use('/api/alerts', alertRoutes);
 app.use('/api/behavior', behaviorRoutes);
 app.use('/api/health', healthRoutes);
 app.use('/api/cases', caseRoutes);
+app.use('/api/mine', mineRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/sos', sosRoutes);
 
 // Root route
 app.get('/', (req, res) => {
@@ -108,7 +123,18 @@ app.use((err, req, res, next) => {
 
 // Start server
 httpServer.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`✅ Server running on port ${PORT}`);
+  console.log(`   API: http://localhost:${PORT}`);
+}).on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`\n❌ ERROR: Port ${PORT} is already in use!\n`);
+    console.error(`To fix this, run: npm run kill:port ${PORT}`);
+    console.error(`Or change the PORT in your .env file\n`);
+    process.exit(1);
+  } else {
+    console.error('❌ Server error:', err);
+    process.exit(1);
+  }
 });
 
 export { io };

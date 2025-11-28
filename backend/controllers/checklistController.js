@@ -84,6 +84,14 @@ export const getUserChecklist = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
     
+    // Restrict checklist access to only workers and supervisors
+    if (!['worker', 'supervisor'].includes(user.role)) {
+      return res.status(403).json({ 
+        success: false,
+        message: 'Checklist is only available for workers and supervisors.' 
+      });
+    }
+    
     // Find existing checklist for today
     let checklist = await Checklist.findOne({
       user: userId,
@@ -138,11 +146,19 @@ export const completeChecklistItem = async (req, res) => {
     }
     
     // Role-based access control: Users can only update their own checklist
-    if (req.user.id !== checklist.user._id.toString() && 
-        !['admin', 'dgms_officer'].includes(req.user.role)) {
+    // Only workers and supervisors can have checklists
+    if (req.user.id !== checklist.user._id.toString()) {
       return res.status(403).json({ 
         success: false,
         message: 'Access denied. You can only update your own checklist.' 
+      });
+    }
+    
+    // Ensure only workers and supervisors can update checklists
+    if (!['worker', 'supervisor'].includes(req.user.role)) {
+      return res.status(403).json({ 
+        success: false,
+        message: 'Checklist is only available for workers and supervisors.' 
       });
     }
     

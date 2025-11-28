@@ -2,7 +2,6 @@ import { useContext, useEffect, useMemo, useState } from 'react';
 import { AuthContext } from '../../context/AuthContext';
 import api from '../../utils/axiosConfig';
 import { getRiskLevelColor } from '../../utils/mineData';
-import { motion } from 'framer-motion';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 
 // Temporary demo data for the risk heatmap so the UI is always visible
@@ -94,8 +93,9 @@ const RiskHeatmapReport = () => {
     const buckets = { LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0 };
     riskZones.forEach((z) => {
       const key = (z.riskLevel || 'LOW').toUpperCase();
-      if (!buckets[key] && buckets[key] !== 0) buckets[key] = 0;
-      buckets[key] += 1;
+      if (buckets.hasOwnProperty(key)) {
+        buckets[key] += 1;
+      }
     });
     return Object.entries(buckets).map(([level, count]) => ({ level, count }));
   }, [riskZones]);
@@ -116,12 +116,7 @@ const RiskHeatmapReport = () => {
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
-      className="p-6 bg-gray-50 rounded-lg shadow-md mt-12"
-    >
+    <div className="p-6 bg-gray-50 rounded-lg shadow-md mt-12">
       {/* Header */}
       <div className="relative overflow-hidden rounded-xl mb-8 bg-gradient-to-r from-blue-700 to-indigo-700 p-8 text-white">
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_top,_#ffffff,_transparent_60%)]" />
@@ -171,7 +166,7 @@ const RiskHeatmapReport = () => {
                   gridTemplateColumns: `repeat(${Math.min(10, Math.max(3, Math.ceil(Math.sqrt(riskZones.length))))}, minmax(1.75rem, 2.25rem))`,
                 }}
               >
-                {riskZones.map((zone, idx) => {
+                {riskZones.map((zone) => {
                   const baseColor = getRiskLevelColor(zone.riskLevel);
                   const intensity = 0.35 + Math.min(1, Math.max(0, zone.riskScore || 0)) * 0.6;
                   const isSelected = selectedZone?.id === zone.id;
@@ -334,7 +329,7 @@ const RiskHeatmapReport = () => {
           </div>
         </div>
       )}
-    </motion.div>
+    </div>
   );
 };
 
