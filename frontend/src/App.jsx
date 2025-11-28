@@ -24,6 +24,8 @@ import IncidentDetail from './pages/incidents/IncidentDetail';
 import GasDetectionDashboard from './pages/safety/GasDetectionDashboard';
 import MineVisualization from './pages/mine/MineVisualization';
 import Profile from './pages/profile/Profile';
+import CaseStudies from './pages/cases/CaseStudies';
+import CaseStudyDetail from './pages/cases/CaseStudyDetail';
 
 // Admin Pages
 import UserManagement from './pages/admin/UserManagement';
@@ -60,6 +62,8 @@ function App() {
           <Route path="/daily-checklist" element={<DailyChecklist />} />
           <Route path="/incident-library" element={<IncidentLibrary />} />
           <Route path="/incident/:id" element={<IncidentDetail />} />
+          <Route path="/case-studies" element={<CaseStudies />} />
+          <Route path="/case-studies/:id" element={<CaseStudyDetail />} />
           <Route path="/gas-detection" element={<GasDetectionDashboard />} />
           <Route path="/mine-visualization" element={<MineVisualization />} />
           <Route path="/profile" element={<Profile />} />
@@ -67,7 +71,6 @@ function App() {
           {/* Admin Routes */}
           <Route path="/admin/user-management" element={<UserManagement />} />
           <Route path="/admin/reports" element={<Reports />} />
-          <Route path="/admin/audit-logs" element={<AuditLogs />} />
         </Route>
       </Route>
     </Routes>
